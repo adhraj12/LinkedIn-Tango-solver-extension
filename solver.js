@@ -1,9 +1,10 @@
-const GRID_SIZE = 6;
-const TARGET_COUNT = GRID_SIZE / 2;
-
 const isPlacementValid = (grid, r, c, hCons, vCons) => {
+    const GRID_SIZE = grid.length;
+    if (GRID_SIZE === 0) return true;
+    const TARGET_COUNT = GRID_SIZE / 2;
+
     const val = grid[r][c];
-    if (val === 0) return true;
+    if (val === 0) return true; // Should not happen if called on a new placement
 
     // 1. Adjacency rule: No more than 2 of the same symbol
     // Horizontal check
@@ -52,6 +53,11 @@ const isPlacementValid = (grid, r, c, hCons, vCons) => {
 };
 
 const isBoardCompleteAndValid = (grid) => {
+    const GRID_SIZE = grid.length;
+    if (GRID_SIZE === 0) return true;
+    if (GRID_SIZE % 2 !== 0) return false; // Grids must be even-sized
+    const TARGET_COUNT = GRID_SIZE / 2;
+
     for (let i = 0; i < GRID_SIZE; i++) {
         let sunCountRow = 0, moonCountRow = 0;
         let sunCountCol = 0, moonCountCol = 0;
@@ -69,6 +75,7 @@ const isBoardCompleteAndValid = (grid) => {
 }
 
 const findEmpty = (grid) => {
+    const GRID_SIZE = grid.length;
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
             if (grid[r][c] === 0) {
@@ -81,8 +88,12 @@ const findEmpty = (grid) => {
 
 // This function will be available in the global scope of the injected script execution context.
 const solve = (grid, hCons, vCons) => {
+    const GRID_SIZE = grid.length;
+    if (GRID_SIZE === 0) return true;
+
     const find = findEmpty(grid);
     if (!find) {
+        // If no empty cells, check if initial state is a full valid board
         for (let r = 0; r < GRID_SIZE; r++) {
             for (let c = 0; c < GRID_SIZE; c++) {
                 if (!isPlacementValid(grid, r, c, hCons, vCons)) return false;
@@ -105,3 +116,4 @@ const solve = (grid, hCons, vCons) => {
     grid[r][c] = 0; // Backtrack
     return false;
 };
+

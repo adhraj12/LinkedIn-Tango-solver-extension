@@ -6,7 +6,6 @@
     // ======================== SELECTOR CONFIGURATION ========================
     const GRID_CONTAINER_SELECTOR = '.lotka-grid';
     const CELL_SELECTOR = '.lotka-cell';
-    const GRID_SIZE = 6;
 
     /**
      * Shows a feedback message on the screen.
@@ -45,7 +44,7 @@
 
     /**
      * Reads the current state of the Tango puzzle from the DOM.
-     * @returns {{grid: number[][], hCons: number[][], vCons: number[][], cells: HTMLElement[]}|null}
+     * @returns {{grid: number[][], hCons: number[][], vCons: number[][], cells: HTMLElement[], gridSize: number}|null}
      */
     function readGrid() {
         const gridContainer = document.querySelector(GRID_CONTAINER_SELECTOR);
@@ -53,23 +52,31 @@
             showFeedback(`❌ Grid container not found. Check selector: ${GRID_CONTAINER_SELECTOR}`, true);
             return null;
         }
+        
+        const style = gridContainer.getAttribute('style');
+        const sizeMatch = style?.match(/--rows:\s*(\d+)/);
+        if (!sizeMatch?.[1]) {
+            showFeedback('❌ Could not determine grid size from style attribute.', true);
+            return null;
+        }
+        const gridSize = parseInt(sizeMatch[1], 10);
 
         const cells = Array.from(gridContainer.querySelectorAll(CELL_SELECTOR));
-        if (cells.length !== GRID_SIZE * GRID_SIZE) {
-            showFeedback(`❌ Found only ${cells.length}/${GRID_SIZE * GRID_SIZE} cells. Check selector: ${CELL_SELECTOR}`, true);
+        if (cells.length !== gridSize * gridSize) {
+            showFeedback(`❌ Found only ${cells.length}/${gridSize * gridSize} cells. Check selector: ${CELL_SELECTOR}`, true);
             return null;
         }
 
-        const grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
-        const hCons = Array.from({ length: GRID_SIZE - 1 }, () => Array(GRID_SIZE).fill(0));
-        const vCons = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE - 1).fill(0));
+        const grid = Array.from({ length: gridSize }, () => Array(gridSize).fill(0));
+        const hCons = Array.from({ length: gridSize - 1 }, () => Array(gridSize).fill(0));
+        const vCons = Array.from({ length: gridSize }, () => Array(gridSize - 1).fill(0));
         
         cells.forEach(cell => {
             const idxAttr = cell.getAttribute('data-cell-idx');
             if (idxAttr === null) return;
             const idx = parseInt(idxAttr, 10);
-            const r = Math.floor(idx / GRID_SIZE);
-            const c = idx % GRID_SIZE;
+            const r = Math.floor(idx / gridSize);
+            const c = idx % gridSize;
 
             // Read Symbols
             if (cell.querySelector('svg[aria-label="Sun"]')) {
@@ -79,7 +86,7 @@
             }
 
             // Read Horizontal Constraints (below the cell)
-            if (r < GRID_SIZE - 1) {
+            if (r < gridSize - 1) {
                 const hWall = cell.querySelector('.lotka-cell-edge--down');
                 if (hWall) {
                     const label = hWall.querySelector('svg')?.getAttribute('aria-label');
@@ -89,7 +96,7 @@
             }
 
             // Read Vertical Constraints (to the right of the cell)
-            if (c < GRID_SIZE - 1) {
+            if (c < gridSize - 1) {
                 const vWall = cell.querySelector('.lotka-cell-edge--right');
                 if (vWall) {
                     const label = vWall.querySelector('svg')?.getAttribute('aria-label');
@@ -99,13 +106,13 @@
             }
         });
 
-        return { grid, hCons, vCons, cells };
+        return { grid, hCons, vCons, cells, gridSize };
     }
 
     /**
      * Fills the solved symbols into the grid on the webpage.
      */
-    function fillGrid(solution, originalGrid, cells) {
+    function fillGrid(solution, originalGrid, cells, gridSize) {
         const sunTemplate = document.querySelector('svg[aria-label="Sun"]')?.cloneNode(true);
         const moonTemplate = document.querySelector('svg[aria-label="Moon"]')?.cloneNode(true);
         
@@ -115,8 +122,8 @@
         }
 
         cells.forEach((cell, index) => {
-            const r = Math.floor(index / GRID_SIZE);
-            const c = index % GRID_SIZE;
+            const r = Math.floor(index / gridSize);
+            const c = index % gridSize;
 
             if (originalGrid[r][c] === 0) { // Only fill originally empty cells
                 const contentDiv = cell.querySelector('.lotka-cell-content');
@@ -149,12 +156,12 @@
         
         const result = readGrid();
         if (result) {
-            const { grid, hCons, vCons, cells } = result;
+            const { grid, hCons, vCons, cells, gridSize } = result;
             const originalGrid = JSON.parse(JSON.stringify(grid));
 
             // The `solve` function is globally available because solver.js was injected first.
             if (solve(grid, hCons, vCons)) {
-                fillGrid(grid, originalGrid, cells);
+                fillGrid(grid, originalGrid, cells, gridSize);
                 showFeedback('✅ Puzzle Solved!');
             } else {
                 showFeedback('❌ No solution could be found.', true);
